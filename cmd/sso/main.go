@@ -1,6 +1,7 @@
 package main
 
 import (
+	"grpc-service-ref/internal/app"
 	"grpc-service-ref/internal/config"
 	"grpc-service-ref/internal/lib/logger/handlers/slogpretty"
 	"log/slog"
@@ -19,9 +20,10 @@ func main() {
 	log := setubLogger(cfg.Env)
 
 	log.Info("start app work")
-	log.Info("info")
-	log.Warn("warn")
-	log.Error("err")
+
+	application := app.New(log, cfg.GRPC.Port, cfg.StoragePath, cfg.TokenTTL)
+
+	application.GRPCSrv.MustRun()
 }
 
 func setubLogger(env string) *slog.Logger {
