@@ -27,7 +27,7 @@ func MustLoad() *Config {
 	}
 
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		panic("config file not found")
+		panic("config file not found = " + path)
 	}
 
 	var cfg Config
@@ -42,7 +42,7 @@ func MustLoad() *Config {
 func fetchConfigPath() string {
 	var res string
 
-	flag.StringVar(&res, "config", "config.yaml", "config file path")
+	flag.StringVar(&res, "config", "", "config file path")
 	flag.Parse()
 
 	if res == "" {
