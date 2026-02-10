@@ -6,6 +6,8 @@ import (
 	"grpc-service-ref/internal/lib/logger/handlers/slogpretty"
 	"log/slog"
 	"os"
+	"os/signal"
+	"syscall"
 )
 
 const (
@@ -24,6 +26,17 @@ func main() {
 	application := app.New(log, cfg.GRPC.Port, cfg.StoragePath, cfg.TokenTTL)
 
 	application.GRPCSrv.MustRun()
+
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
+
+	sign := <-stop
+
+	log.Info("application stopping", slog.String("signal", sign.String()))
+
+	application.GRPCSrv.Stop()
+
+	log.Info("application stopped")
 }
 
 func setubLogger(env string) *slog.Logger {
