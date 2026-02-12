@@ -2,6 +2,9 @@ package auth
 
 import (
 	"context"
+	"errors"
+	"grpc-service-ref/internal/services/auth"
+	"grpc-service-ref/internal/storage"
 
 	ssov1 "github.com/archefnx/protos/gen/go/sso"
 	"google.golang.org/grpc"
@@ -36,8 +39,8 @@ type serverAPI struct {
 	auth Auth
 }
 
-func Register(gRPC *grpc.Server) {
-	ssov1.RegisterAuthServer(gRPC, &serverAPI{})
+func Register(gRPCServer *grpc.Server, auth Auth) {
+	ssov1.RegisterAuthServer(gRPCServer, &serverAPI{auth: auth})
 }
 
 func (s *serverAPI) Login(
@@ -50,11 +53,15 @@ func (s *serverAPI) Login(
 
 	token, err := s.auth.Login(ctx, req.GetEmail(), req.GetPassword(), req.GetAppId())
 	if err != nil {
+		if errors.Is(err, auth.ErrInvalidCredentials) {
+			return nil, status.Error(codes.InvalidArgument, "invalid email or password")
+		}
+
 		return nil, status.Error(codes.Internal, "Invalid error")
 	}
 
 	return &ssov1.LoginResponse{
-		Token: req.GetEmail(),
+		Token: token,
 	}, nil
 }
 
@@ -84,8 +91,14 @@ func (s *serverAPI) Register(
 
 	userId, err := s.auth.RegisterNewUser(ctx, req.GetEmail(), req.GetPassword())
 	if err != nil {
+		if errors.Is(err, storage.ErrUserExists) {
+			return nil, status.Error(codes.AlreadyExists, "user already exists")
+		}
+
 		return nil, status.Error(codes.Internal, "Invalid error")
 	}
+
+	return &ssov1.RegisterResponse{UserId: userId}, nil
 }
 
 func validateRegister(req *ssov1.RegisterRequest) error {
@@ -108,10 +121,16 @@ func (s *serverAPI) IsAdmin(
 		return nil, err
 	}
 
-	userId, err := s.auth.IsAdmin(ctx, req.GetUserId())
+	isAdmin, err := s.auth.IsAdmin(ctx, req.GetUserId())
 	if err != nil {
+		if errors.Is(err, storage.ErrUserNotFound) {
+			return nil, status.Error(codes.NotFound, "user not found")
+		}
+
 		return nil, status.Error(codes.Internal, "Invalid error")
 	}
+
+	return &ssov1.IsAdminResponse{IsAdmin: isAdmin}, nil
 }
 
 func validateIsAdmin(req *ssov1.IsAdminRequest) error {

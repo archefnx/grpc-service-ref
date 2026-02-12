@@ -8,8 +8,6 @@ import (
 
 	"grpc-service-ref/internal/domain/models"
 	"grpc-service-ref/internal/storage"
-
-	"github.com/mattn/go-sqlite3"
 )
 
 type Storage struct {
@@ -19,7 +17,7 @@ type Storage struct {
 func New(storagePath string) (*Storage, error) {
 	const op = "storage.sqlite.New"
 
-	db, err := sql.Open("sqlite3", storagePath)
+	db, err := sql.Open("sqlite", storagePath)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
@@ -42,10 +40,6 @@ func (s *Storage) SaveUser(ctx context.Context, email string, passHash []byte) (
 
 	res, err := stmt.ExecContext(ctx, email, passHash)
 	if err != nil {
-		var sqliteErr sqlite3.Error
-		if errors.As(err, &sqliteErr) && sqliteErr.ExtendedCode == sqlite3.ErrConstraintUnique {
-			return 0, fmt.Errorf("%s: %w", op, storage.ErrUserExists)
-		}
 
 		return 0, fmt.Errorf("%s: %w", op, err)
 	}
@@ -99,7 +93,7 @@ func (s *Storage) User(ctx context.Context, email string) (models.User, error) {
 //}
 
 // App returns app by id.
-func (s *Storage) App(ctx context.Context, id int) (models.App, error) {
+func (s *Storage) App(ctx context.Context, appID int32) (models.App, error) {
 	const op = "storage.sqlite.App"
 
 	stmt, err := s.db.Prepare("SELECT id, name, secret FROM apps WHERE id = ?")
@@ -107,7 +101,7 @@ func (s *Storage) App(ctx context.Context, id int) (models.App, error) {
 		return models.App{}, fmt.Errorf("%s: %w", op, err)
 	}
 
-	row := stmt.QueryRowContext(ctx, id)
+	row := stmt.QueryRowContext(ctx, appID)
 
 	var app models.App
 	err = row.Scan(&app.ID, &app.Name, &app.Secret)

@@ -42,7 +42,7 @@ type UserProvider interface {
 }
 
 type AppProvider interface {
-	App(ctx context.Context, appID int) (models.App, error)
+	App(ctx context.Context, appID int32) (models.App, error)
 }
 
 func New(
@@ -69,7 +69,7 @@ func (a *Auth) Login(
 	ctx context.Context,
 	email string,
 	password string,
-	appID int,
+	appID int32,
 ) (string, error) {
 	const op = "Auth.Login"
 
